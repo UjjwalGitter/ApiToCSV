@@ -1,20 +1,25 @@
 import com.github.opendevl.JFlat;
+import model.Model;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.*;
 import java.math.BigInteger;
+import java.net.URISyntaxException;
 import java.util.*;
 
 
@@ -23,49 +28,52 @@ import java.util.*;
 // book_update to json
 public class JsonReader {
     // Data apis.
-    private static BigInteger max_ID, maxLastUpdated;
+    public static Model model;
     final private static String SUBJECT_API = "https://gist.githubusercontent.com/sharish/08152723d3910ad5c15726cbce8993d4/raw/7e59de7c2b91375e676e04bfb036c3dbdc3bca28/subject.json";
     final private static String TEST_API = "https://gist.githubusercontent.com/sharish/45aa2116865624e59bf700e275954342/raw/8e34e8c13820dd7a16164e1438016f50f073f307/test.json";
     final private static String LESSON_API = "https://gist.githubusercontent.com/sharish/2b342b3b65fcb1d69af9d4b4c165ad13/raw/d5b1e3553f231135d4025b1848298795f192b6c6/lesson.json";
-    private static boolean load_more = true;
+    private static boolean loadMore = true;
     public static final int  MAX_API_COUNT = 10;// 50000
 
     public static void main(String[] args) throws Exception {
 
-        String perlApi = "https://drive.google.com/file/d/1yNySiIDfdpeJenIbmhC3em88-kN1VpiR/view?usp=sharing";
+     /*   String perlApi = "https://drive.google.com/file/d/1yNySiIDfdpeJenIbmhC3em88-kN1VpiR/view?usp=sharing";
         String modifiedPerlApi = convertDownloadableLink(perlApi);
-//        JSONArray jsonArray = readJsonFromUrl(modifiedPerlApi);
-//        System.out.println(jsonArray.toString());
+        jsonToCsv(modifiedPerlApi); */
+      //  System.out.println(jsonArray.toString());
+      //  writingJsonToCsv(jsonArray.toString(),"abacus");
+        Scanner scanner = new Scanner(System.in);
+        String input = scanner.nextLine();
+        Set<String> set = new HashSet<>();
+        set.add("test");
+        set.add("lesson");
+        set.add("subject");
+       // getJSON();
 
-//        Scanner scanner = new Scanner(System.in);
-//        String input = scanner.nextLine();
-//        Set<String> set = new HashSet<>();
-//        set.add("test");
-//        set.add("lesson");
-//        set.add("subject");
-//       // getJSON();
-
-//        if (set.contains(input))
-//            jsonToCsv(input);
-//        else
-//            System.out.println("Provide valid input");
+        if (set.contains(input))
+            jsonToCsv(input);
+        else
+            System.out.println("Provide valid input");
     }
 
-    public static void jsonToCsv(String apiType) throws IOException, JSONException {
+    public static void jsonToCsv(String apiType) throws IOException, JSONException, URISyntaxException {
 
         String inputApi = validate(apiType);
         HashSet<String> wantedFields = desiredFields();
 
         int counter = MAX_API_COUNT;
+        model = new Model(new BigInteger("0"),new BigInteger("0"));
 
-        while (load_more || counter>0) {
-            JSONArray jsonArray = readJsonFromUrl(inputApi, max_ID, maxLastUpdated);
+        while (loadMore && counter>0) {
+            JSONArray jsonArray = readJsonFromUrl(inputApi, model);
+
             if (jsonArray == null)
                 break;
 
             String jsonDataString = partitioningJsonArray(jsonArray, wantedFields);
             writingToJson(jsonDataString,apiType);
             writingJsonToCsv(jsonDataString, apiType);
+          //  System.out.println(counter);
             counter--;
         }
     }
@@ -81,16 +89,23 @@ public class JsonReader {
 
     public static HashSet<String> desiredFields() {
         HashSet<String> wantedFields = new HashSet<>();
-        wantedFields.add("body_encrypt");
+        wantedFields.add("_id");
         wantedFields.add("subject_id");
+        wantedFields.add("last_updated");
         return wantedFields;
     }
 
     //first 0,0
 
-    public static JSONArray readJsonFromUrl(String inputApi, BigInteger maxID, BigInteger maxLastUpdated) throws IOException {
-        HttpGet request = new HttpGet(inputApi);
+    public static JSONArray readJsonFromUrl(String inputApi, Model model) throws IOException, URISyntaxException {
+     //   HttpGet request = new HttpGet(inputApi);
+        URIBuilder builder = new URIBuilder(inputApi);
+        builder.setParameter("_id",model.maxID.toString());
+        builder.setParameter("last_updated",model.maxLastUpdated.toString());
 
+        HttpGet request = new HttpGet(builder.build());
+
+       // System.out.println(request.toString());
         setHeaderToRequest(request);
         CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = client.execute(request);
@@ -101,7 +116,7 @@ public class JsonReader {
         JSONObject jo1 = jsonObject.getJSONObject("data");
 
         jsonObject = jsonObject.getJSONObject("data");
-        load_more = (jsonObject.getBoolean("load_more"));
+        loadMore = (jsonObject.getBoolean("load_more"));
 
         return jo1.getJSONArray("data");
     }
@@ -110,9 +125,6 @@ public class JsonReader {
     // maxid, maxLast, json
 
     public static String partitioningJsonArray(JSONArray jsonArray, HashSet<String> wantedFields) {
-        max_ID = new BigInteger("1");
-        maxLastUpdated = new BigInteger("1");
-
         for (int i = 0; i < jsonArray.length(); i++) {
             JSONObject k = (JSONObject) jsonArray.get(i);
             ArrayList<String> arr = new ArrayList<>(k.keySet());
@@ -122,8 +134,9 @@ public class JsonReader {
             }
             BigInteger tempMaxId = new BigInteger(k.getString("_id"), 16);
             BigInteger tempLastUpdated = k.getBigInteger("last_updated");
-            max_ID = max_ID.max(tempMaxId);
-            maxLastUpdated = maxLastUpdated.max(tempLastUpdated);
+
+            model.setMaxID(model.getMaxID().max(tempMaxId));
+            model.setMaxLastUpdated(model.getMaxLastUpdated().max(tempLastUpdated));
         }
       //  System.out.println("MAX BIGINT: " + max_ID);
         return jsonArray.toString();
@@ -152,17 +165,10 @@ public class JsonReader {
     }
 
     public static void setHeaderToRequest(HttpGet request){
+
         request.addHeader("platform","android");
         request.addHeader("timestamp","epochtime");
         request.addHeader("app-version","200");
-    }
-
-    public static BigInteger getMaxID() {
-        return max_ID;
-    }
-
-    public static BigInteger getMaxLastUpdated() {
-        return maxLastUpdated;
     }
 
     // for converting google drive links into downloadable

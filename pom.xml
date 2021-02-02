@@ -16,6 +16,7 @@
 
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/uri/uri -->
 
 
         <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->

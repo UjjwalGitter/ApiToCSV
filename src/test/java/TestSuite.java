@@ -1,3 +1,4 @@
+import model.Model;
 import org.json.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
@@ -9,6 +10,7 @@ import org.json.simple.parser.JSONParser;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,12 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestSuite {
     public static final String API = "https://gist.githubusercontent.com/sharish/2b342b3b65fcb1d69af9d4b4c165ad13/raw/d5b1e3553f231135d4025b1848298795f192b6c6/lesson.json";
     public static String maxId = "";
+    public static Model model;
     public static String maxLastUpdated = "";
     public static String jsonStringFromLocal = "";
 
-
     @BeforeEach
-    public void beforeApiCall() throws IOException, ParseException {
+    public void beforeApiCall() throws IOException, ParseException, URISyntaxException {
         BigInteger max_id = new BigInteger("1");
         BigInteger max_last_updated = new BigInteger("1");
         JsonReader.jsonToCsv("lesson");
@@ -62,21 +64,20 @@ public class TestSuite {
     }
 
     @Test
-    public void readJsonFromUrlTest() throws IOException{
-//        JSONArray expectedJson = JsonReader.readJsonFromUrl(API,maxId,maxLastUpdated);
-//            String expectedJsonString = expectedJson.toString();
-//            String actualJsonString = jsonStringFromLocal;
-//            assertEquals(expectedJsonString, actualJsonString);
+    public void readJsonFromUrlTest() throws IOException, URISyntaxException {
+        JSONArray expectedJson = JsonReader.readJsonFromUrl(API,model);
+            String expectedJsonString = expectedJson.toString();
+            String actualJsonString = jsonStringFromLocal;
+            assertEquals(expectedJsonString, actualJsonString);
     }
 
     @Test
-    public void getMaxIdTest()  {
-        assertEquals(JsonReader.getMaxID().toString(), maxId);
-    }
+    public void getMaxIdTest()  { assertEquals(JsonReader.model.getMaxID().toString(), maxId); }
 
     @Test
     public void getMaxLastUpdated(){
-        assertEquals(JsonReader.getMaxLastUpdated().toString(),maxLastUpdated);
+        System.out.println(maxLastUpdated);
+        assertEquals(JsonReader.model.getMaxLastUpdated().toString(),maxLastUpdated);
     }
 
 }
